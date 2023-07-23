@@ -1,5 +1,13 @@
 FROM jenkins/jenkins
+ENV JAVA_OPTS -Djenkins.install.runSetupWizard=false
+ENV CASC_JENKINS_CONFIG /usr/share/jenkins/ref/casc.yaml
+COPY --chown=jenkins:jenkins plugins.txt /usr/share/jenkins/ref/plugins.txt
+COPY --chown=jenkins:jenkins casc.yaml /usr/share/jenkins/ref/casc.yaml
+# Notice install-plugins.sh has been deprecated. Using jenkins-plugin-cli instead. Ref: https://github.com/jenkinsci/docker/blob/master/README.md#usage-1
+RUN jenkins-plugin-cli -f /usr/share/jenkins/ref/plugins.txt
+
 USER root
+
 
 RUN apt-get update && \
     apt-get install -y \
