@@ -12,4 +12,4 @@ jenkins:
         - "Overall/Read:authenticated"
 unclassified:
   location:
-    url: https://devops-elgrupo.keberlabs.com:8080/
+    url: https://devops-elgrupo.keberlabs.com:8081/
