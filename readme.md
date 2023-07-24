@@ -1,3 +1,76 @@
+# Modificaciones dignas de mencionar
+## Implementación Config as Code (CASC)
+
+Se modificaron los sgtes. archivos:
+```console
+./docker-compose.yml
+dockerjenkins/Dockerfile
+```
+
+Se añadieron los sgtes. archivos:
+```console
+dockerjenkins/plugins.txt
+dockerjenkins/casc.yaml
+```
+
+Otros requisitos:
+
+Crear el archivo ./.env con el sgte contenido:
+```console
+ENV_JENKINS_ADMIN_ID=admin
+ENV_JENKINS_ADMIN_PASSWORD=PasswordAdministrador
+```
+
+## Funcionamiento
+
+En docker-compose.yml se añadieron variables de entorno las cuales serán leídas en tiempo de ejecución del docker compose, y serán añadidas como parámetros de inicio de Jenkins.
+
+En Dockerfile se añadieron las siguientes líneas al inicio del script:
+
+```console
+ENV JAVA_OPTS -Djenkins.install.runSetupWizard=false
+ENV CASC_JENKINS_CONFIG /usr/share/jenkins/ref/casc.yaml
+COPY --chown=jenkins:jenkins plugins.txt /usr/share/jenkins/ref/plugins.txt
+COPY --chown=jenkins:jenkins casc.yaml /usr/share/jenkins/ref/casc.yaml
+# Notice install-plugins.sh has been deprecated. Using jenkins-plugin-cli instead. Ref: https://github.com/jenkinsci/docker/blob/master/README.md#usage-1
+RUN jenkins-plugin-cli -f /usr/share/jenkins/ref/plugins.txt
+```
+
+El propósito de éstas es indicar:
+1. Un parámetro de Environment para el inicio de jenkins, para que no inicie el Wizard de configuración la primera vez que se accede a la interfaz de Jenkins.
+2. Un parámetro de Environment para el inicio de jenkins, indicando dónde se encuentra el archivo de configuración casc.yaml . Este archivo será interpretado por el plugin configuration-as-code una vez que éste sea instalado en la imagen de jenkins.
+3. Dos comandos de copia de archivos, plugins.txt que contiene un listado de plugins utilizados previamente, y casc.yaml que contiene la configuración deseada para la imagen de jenkins.
+4. La invocación del comando jenkins-plugin-cli , con el fin de cargar la lista de plugins entregada anteriormente.
+
+Observaciones:
+Los sitios web consultados sugerían copiar el archivo casc.yaml a la ruta /var/jenkins_home/casc.yaml , sin embargo tuve problemas con este approach (Error: El directorio no existe). Es posible que la ruta definida en el docker-compose.yml haya sido errónea (cuando probaba lo usaba con $PWD/jenkins_home:/var/jenkins_home . El uso de la ruta /usr/share/jenkins/ref sin embargo resultó exitosa. 
+
+## Archivo casc.yaml
+
+```yaml
+jenkins:
+  securityRealm:
+    local:
+      allowsSignup: false
+      users:
+      - id: ${JENKINS_ADMIN_ID}
+        password: ${JENKINS_ADMIN_PASSWORD}
+  authorizationStrategy:
+    globalMatrix:
+      permissions:
+        - "Overall/Administer: ${JENKINS_ADMIN_ID}"
+        - "Overall/Read:authenticated"
+unclassified:
+  location:
+    url: https://devops-elgrupo.keberlabs.com:8080/
+```
+
+Este archivo de configuración indica lo siguiente:
+1. No permite crear nuevos usuarios desde la interfaz web de inicio de Jenkins (allowSignup: false)
+2. Crea un usuario con id y password según las variables de entorno existentes en archivo .env
+3. Asigna permisos de Administración al usuario creado, y permisos de lectura sólo a aquellos usuarios autentificados en la plataforma.
+4. Establece la url del servidor.
+
 # Instalar Proyecto Jenkins, Nexus y Sonar Dockerizados
 
 Iniciar Minikube porque lo necesitamos: 
